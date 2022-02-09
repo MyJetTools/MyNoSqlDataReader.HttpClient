@@ -1,5 +1,4 @@
-﻿using System.Reflection;
-using Flurl;
+﻿using Flurl;
 using Flurl.Http;
 using MyNoSqlDataReader.Core;
 using MyNoSqlDataReader.Core.SyncEvents;
@@ -61,8 +60,6 @@ public class MyNoSqlHttpConnection
     
     public MyNoSqlHttpConnection(Func<string> getHost, string appName)
     {
-        var assembly = Assembly.GetAssembly(this.GetType());
-        
         _getHost = getHost;
         _appName = appName;
     }
