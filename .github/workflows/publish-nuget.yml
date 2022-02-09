@@ -1,0 +1,28 @@
+
+name: Release nuget
+
+on:
+  push:
+    tags: "*"
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup .NET Core
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: 6.0.*
+      - name: Build
+        run: dotnet build --configuration Release
+      - name: Test
+        run: dotnet test --configuration Release
+
+      - name: Create the package - MySettingsReader
+        run: dotnet pack --configuration Release MyNoSqlDataReader.HttpClient/MyNoSqlDataReader.HttpClient.csproj /p:Version=${GITHUB_REF#refs/tags/}
+
+      - name: Publish the package
+        run: dotnet nuget push MyNoSqlDataReader.HttpClient/bin/Release/*.nupkg -s "https://api.nuget.org/v3/index.json" -k ${{ secrets.NUGET_TOCKEN }}
