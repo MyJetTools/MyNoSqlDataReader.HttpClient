@@ -1,4 +1,5 @@
-﻿using Flurl;
+﻿using System.Reflection;
+using Flurl;
 using Flurl.Http;
 using MyNoSqlDataReader.Core;
 using MyNoSqlDataReader.Core.SyncEvents;
@@ -40,18 +41,30 @@ public class MyNoSqlHttpConnection
     }
 
     private readonly Func<string> _getHost;
-    private string _appName;
-    private string _libVersion;
+    private readonly string _appName;
 
     private readonly Dictionary<string, IMyNoSqlDataReader> _subscribers = new();
     
     public TimeSpan ConnectTimeout = TimeSpan.FromSeconds(3);
     
-    public MyNoSqlHttpConnection(Func<string> getHost, string appName, string libVersion)
+    private static readonly Lazy<string> ReaderVersion = new (() =>
     {
+        try
+        {
+            return typeof(MyNoSqlHttpConnection).Assembly.GetName().Version?.ToString() ?? "Unknown";
+        }
+        catch (Exception)
+        {
+            return "Unknown";
+        }
+    });
+    
+    public MyNoSqlHttpConnection(Func<string> getHost, string appName)
+    {
+        var assembly = Assembly.GetAssembly(this.GetType());
+        
         _getHost = getHost;
         _appName = appName;
-        _libVersion = libVersion;
     }
 
 
@@ -186,8 +199,8 @@ public class MyNoSqlHttpConnection
     {
         var result = await _getHost().AppendPathSegment("DataReader")
             .AppendPathSegment("Greeting")
-            .SetQueryParam("name", "Test")
-            .SetQueryParam("version", "2.3.4")
+            .SetQueryParam("name", _appName)
+            .SetQueryParam("version", ReaderVersion.Value)
             .PostAsync().ReceiveJson<NewSessionModel>();
 
         _sessionId =  result.Session;
