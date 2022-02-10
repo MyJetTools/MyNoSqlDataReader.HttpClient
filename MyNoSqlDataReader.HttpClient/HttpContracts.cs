@@ -70,7 +70,7 @@ public static class HttpContracts
 
     private static int ParseInt(ref int pos, byte[] payload)
     {
-        var result = BitConverter.ToUInt16(payload.AsSpan(pos, pos+4));
+        var result = BitConverter.ToInt32(payload.AsSpan(pos, 4));
         pos += 4;
 
         return result;
