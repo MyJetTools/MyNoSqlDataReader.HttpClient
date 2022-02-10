@@ -86,22 +86,26 @@ public static class HttpContracts
         return result;
     }
 
+    public class HeaderModel
+    {
+        public string TableName { get; set; }
+    }
 
     private static (SyncEventType eventType, string tableName) ParseHeaderString(string headerString)
     {
-        var index = headerString.IndexOf('=');
+        var index = headerString.IndexOf(':');
         
         if (index<0)
         {
             throw new Exception($"Invalid header string {headerString}" );
         }
 
-        var tableName = headerString.Substring(index + 1);
+        var header = Newtonsoft.Json.JsonConvert.DeserializeObject<HeaderModel>(headerString.Substring(index + 1));
 
         var eventName = headerString.Substring(0, index);
 
         var eventType = ParseSyncEventType(eventName);
 
-        return (eventType, tableName);
+        return (eventType, header.TableName);
     } 
 }
