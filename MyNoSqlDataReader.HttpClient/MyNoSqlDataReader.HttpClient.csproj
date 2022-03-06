@@ -9,8 +9,8 @@
 
     <ItemGroup>
       <PackageReference Include="Flurl.Http" Version="3.2.2" />
-      <PackageReference Include="MyNoSqlDataReader.Core" Version="1.0.6" />
-      <PackageReference Include="MyNoSqlServer.Abstractions" Version="1.2.3" />
+      <PackageReference Include="MyNoSqlDataReader.Core" Version="1.0.10" />
+      <PackageReference Include="MyNoSqlServer.Abstractions" Version="1.2.6" />
     </ItemGroup>
 
 

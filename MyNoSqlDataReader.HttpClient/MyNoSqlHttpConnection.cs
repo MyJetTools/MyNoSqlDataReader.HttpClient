@@ -2,38 +2,10 @@
 using Flurl.Http;
 using MyNoSqlDataReader.Core;
 using MyNoSqlDataReader.Core.SyncEvents;
-
 namespace MyNoSqlDataReader.HttpClient;
 
-using MyNoSqlServer.Abstractions;
-
-public class MyNoSqlHttpConnection
+public class MyNoSqlHttpConnection : MyNoSqlDataReaderConnection
 {
-    public enum LogLevel{
-        Error, Info
-    }
-
-    public struct LogItem
-    {
-        public DateTime DateTime { get; private set; }
-        public LogLevel Level { get; private set; }
-        public string Process { get; private set; }
-        public string Message { get; private set; }
-        public Exception? Exception { get; private set; }
-        
-        public static LogItem Create(LogLevel logLevel, string process, string message, Exception? exception)
-        {
-            return new LogItem
-            {
-                DateTime = DateTime.UtcNow,
-                Level = logLevel,
-                Process = process,
-                Message = message,
-                Exception = exception
-            };
-        }
-    }
-    
     public class NewSessionModel
     {
         public string? Session { get; set; }
@@ -42,7 +14,7 @@ public class MyNoSqlHttpConnection
     private readonly Func<string> _getHost;
     private readonly string _appName;
 
-    private readonly Dictionary<string, IMyNoSqlDataReader> _subscribers = new();
+    private readonly Dictionary<string, IMyNoSqlDataReaderEventUpdater> _subscribers = new();
     
     public TimeSpan ConnectTimeout = TimeSpan.FromSeconds(3);
     
@@ -64,52 +36,10 @@ public class MyNoSqlHttpConnection
         _appName = appName;
     }
 
-
-
     private readonly object _lockObject = new();
     private Task? _connectLoopTask;
 
     private string? _sessionId;
-
-    private Action<LogItem>? _logCallback;
-
-    private void PlugLog(Action<LogItem> logCallback)
-    {
-        _logCallback = logCallback;
-    }
-
-
-    private void WriteLogToConsole(ref LogItem item)
-    {
-        Console.WriteLine("==== Socket Log Record =====");
-        Console.WriteLine($"DateTime: {item.DateTime:s}");
-        Console.WriteLine($"Level: {item.Level}");
-        Console.WriteLine($"Process: {item.Process}");
-        Console.WriteLine($"Message: {item.Message}");
-
-        if (item.Exception != null)
-        {
-            Console.WriteLine($"Exception: {item.Exception}");
-        }
-    }
-
-
-    private void WriteLog(LogItem item)
-    {
-        if (_logCallback == null)
-        {
-            WriteLogToConsole(ref item);
-        }
-        else
-        {
-            if (item.Level == LogLevel.Error)
-            {
-                WriteLogToConsole(ref item);
-            }
-
-            _logCallback(item);
-        }
-    }
 
     private async Task ConnectLoopAsync()
     {
@@ -128,7 +58,7 @@ public class MyNoSqlHttpConnection
             }
             catch (Exception e)
             {
-                WriteLog(LogItem.Create(LogLevel.Error, "ConnectLoop", e.Message, e));
+                Logger.Write(Logger.LogItem.Create(Logger.LogLevel.Error, "ConnectLoop", e.Message, e));
                 await Task.Delay(ConnectTimeout);
             }
             
@@ -136,14 +66,10 @@ public class MyNoSqlHttpConnection
         
     }
 
-    public MyNoSqlDataReader<TDbRow> Subscribe<TDbRow>(string tableName) where TDbRow: IMyNoSqlEntity, new()
+    protected override IInitTableSyncEvents<TDbRow> CreateInitTableSyncEvents<TDbRow>()
     {
-        var parser = new HttpEventsParser<TDbRow>();
-        var result = new MyNoSqlDataReader<TDbRow>(tableName, parser);
-        _subscribers.Add(tableName, result);
-        return result;
+        return new HttpEventsParser<TDbRow>();
     }
-
 
     private async Task GetChangesLoopAsync()
     {
@@ -156,7 +82,7 @@ public class MyNoSqlHttpConnection
         }
         finally
         {
-            WriteLog(LogItem.Create(LogLevel.Info, "Session is disconnected", $"Id={_sessionId}", null));
+            Logger.Write(Logger.LogItem.Create(Logger.LogLevel.Info, "Session is disconnected", $"Id={_sessionId}", null));
             _sessionId = null;
         }
 
@@ -202,7 +128,7 @@ public class MyNoSqlHttpConnection
 
         _sessionId =  result.Session;
         
-        WriteLog(LogItem.Create(LogLevel.Info, "New Session", $"Id={_sessionId}", null));
+        Logger.Write(Logger.LogItem.Create(Logger.LogLevel.Info, "New Session", $"Id={_sessionId}", null));
     }
 
     public void Start()
