@@ -14,8 +14,6 @@ public class MyNoSqlHttpConnection : MyNoSqlDataReaderConnection
     private readonly Func<string> _getHost;
     private readonly string _appName;
 
-    private readonly Dictionary<string, IMyNoSqlDataReaderEventUpdater> _subscribers = new();
-    
     public TimeSpan ConnectTimeout = TimeSpan.FromSeconds(3);
     
     private static readonly Lazy<string> ReaderVersion = new (() =>
@@ -90,7 +88,7 @@ public class MyNoSqlHttpConnection : MyNoSqlDataReaderConnection
 
     private async Task SubscribeToTablesAsync()
     {
-        foreach (var tableName in _subscribers.Keys)
+        foreach (var tableName in SubscribedTables)
         {
             await _getHost().AppendPathSegment("DataReader")
                 .AppendPathSegment("Subscribe")    
@@ -110,10 +108,7 @@ public class MyNoSqlHttpConnection : MyNoSqlDataReaderConnection
 
         foreach (var syncContract in HttpContracts.Read(syncPayload))
         {
-            if (_subscribers.TryGetValue(syncContract.TableName, out var dataReader))
-            {
-                dataReader.UpdateData(syncContract);
-            }
+            HandleIncomingPacket(syncContract);
         }
 
     }
@@ -137,7 +132,7 @@ public class MyNoSqlHttpConnection : MyNoSqlDataReaderConnection
         lock (_lockObject)
         {
 
-            if (_subscribers.Count == 0)
+            if (SubscribersCount == 0)
             {
                 throw new Exception("There are no subscribers to start MyNoSqlDataReader");
             }
