@@ -81,7 +81,7 @@ public static class HttpContracts
         var len = ParseInt(ref pos, payload);
 
         var result = new ReadOnlyMemory<byte>(payload, pos,  len);
-        pos += pos + len;
+        pos += len;
 
         return result;
     }
